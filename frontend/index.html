@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monte sua Cesta</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="barra-navegacao">
+        <h1 class="logotipo">Loja de Cestas</h1>
+        <div class="acoes-usuario">
+            <span id="user-greeting" style="display: none; margin-right: 15px;"></span>
+            <button id="cart-toggle-btn">Carrinho (<span id="cart-count">0</span>)</button>
+        </div>
+    </header>
+
+    <main style="padding: 20px;">
+
+
+        <section id="view-home" class="tela tela-ativa">
+            <h2>Bem-vindo!</h2>
+            <p>Comece a montar sua cesta de presentes agora mesmo.</p><br>
+            <button onclick="app.iniciarFluxo()">Montar Cesta</button>
+        </section>
+
+
+        <section id="view-auth" class="tela">
+            <h2>Identifique-se</h2>
+            <div style="margin-bottom: 20px;">
+                <button id="tab-login" onclick="app.alternarAbaAutenticacao('login')">Login</button>
+                <button id="tab-register" onclick="app.alternarAbaAutenticacao('register')">Cadastro</button>
+            </div>
+
+
+            <div id="form-login">
+                <label>Email: <input type="email" id="login-email"></label><br><br>
+                <button onclick="app.entrar()">Entrar</button>
+            </div>
+
+
+            <div id="form-register" style="display: none;">
+                <label>Nome: <input type="text" id="reg-nome"></label><br><br>
+                <label>Telefone: <input type="text" id="reg-tel"></label><br><br>
+                <button onclick="app.cadastrar()">Cadastrar</button>
+            </div>
+        </section>
+
+
+        <section id="view-selection" class="tela">
+            <div style="margin-bottom: 20px;">
+                <button class="etapa" data-category="cesta" onclick="app.carregarCategoria('cesta')">1.
+                    Embalagem</button>
+                <button class="etapa" data-category="bebida" onclick="app.carregarCategoria('bebida')">2.
+                    Bebidas</button>
+                <button class="etapa" data-category="item_comestivel"
+                    onclick="app.carregarCategoria('item_comestivel')">3. Comestíveis</button>
+                <button class="etapa" data-category="decoracao_cesta"
+                    onclick="app.carregarCategoria('decoracao_cesta')">4. Decoração</button>
+                <button class="etapa" data-category="cartao_de_mensagem"
+                    onclick="app.carregarCategoria('cartao_de_mensagem')">5. Cartão</button>
+            </div>
+
+            <h2 id="category-title">Categoria</h2>
+            <p id="category-desc" style="margin-bottom: 20px;">Descrição</p>
+
+            <div id="products-grid" class="grade-produtos"></div>
+
+            <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px;">
+                <button onclick="app.etapaAnterior()">Etapa Anterior</button>
+                <button onclick="app.proximaEtapa()">Próxima Etapa</button>
+            </div>
+        </section>
+
+
+        <section id="view-checkout" class="tela">
+            <h2>Finalizar Pedido</h2>
+            <p><strong>Comprador:</strong> <span id="checkout-cli-nome"></span> | <strong>Tel:</strong> <span
+                    id="checkout-cli-tel"></span></p>
+            <br>
+            <label>Seu CPF/CNPJ: <input type="text" id="cli-cpf"></label><br><br>
+
+            <h3>Dados de Entrega</h3>
+            <label>Destinatário: <input type="text" id="dest-nome"></label><br><br>
+            <label>Endereço: <input type="text" id="dest-end"></label><br><br>
+            <label>Data/Hora: <input type="datetime-local" id="dest-data"></label><br><br>
+
+            <h3>Cartão (Opcional)</h3>
+            <label>Mensagem que irá no cartão:<br><textarea id="mensagem-cartao" rows="4"
+                    style="width: 100%; max-width: 400px; padding: 5px; font-family: sans-serif;"></textarea></label><br><br>
+
+            <button onclick="app.enviarPedido()">Confirmar e Enviar Pedido</button>
+            <button onclick="app.mostrarTela('view-selection')">Voltar</button>
+        </section>
+
+    </main>
+
+
+    <div id="cart-overlay" class="fundo-escuro-carrinho"></div>
+    <div id="cart-sidebar" class="menu-lateral-carrinho">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>Carrinho</h2>
+            <button id="close-cart-btn">Fechar (X)</button>
+        </div>
+        <div id="cart-items-container"></div>
+        <div style="margin-top: 20px; border-top: 1px solid #000; padding-top: 10px;">
+            <p><strong>Total: <span id="cart-total-price">R$ 0,00</span></strong></p>
+            <br>
+            <button id="btn-go-checkout" onclick="app.irParaPagamento()" style="width: 100%;">Ir para Checkout</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
