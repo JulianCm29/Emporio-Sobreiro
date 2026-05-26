@@ -30,14 +30,28 @@
     <fieldset>
       <legend>Dados para entrega:</legend>
           
-          <label for="entrega_destinatario_nome">Nome do destinarário:</label><br>
-          <input type="text" id="entrega_destinatario_nome" name="entrega_destinatario_nome" value="{{pedidoPlano.entrega_destinatario_nome}}" readonly maxlength="100" size="50"><br><br>
+          <label for="entrega_destinatario_nome">Nome do destinatário:</label><br>
+          <input type="text" id="entrega_destinatario_nome" name="entrega_destinatario_nome" value="{{pedidoPlano.entrega_destinatario_nome}}" readonly size="50"><br><br>
 
           <label for="entrega_destinatario_endereco">Endereço:</label><br>
-          <input type="text" id="entrega_destinatario_endereco" name="entrega_destinatario_endereco" value="{{pedidoPlano.entrega_destinatario_endereco}}" readonly maxlength="100" size="50"><br><br>
+          <input type="text" id="entrega_destinatario_endereco" name="entrega_destinatario_endereco" value="{{pedidoPlano.entrega_destinatario_endereco}}" readonly size="50"><br><br>
 
           <label for="entrega_data_horario">Data e horário:</label><br>
-          <input type="text" id="entrega_data_horario" name="entrega_data_horario" value="{{pedidoPlano.entrega_data_horario}}" readonly maxlength="100" size="50"><br><br>
+          <input type="text" id="entrega_data_horario" name="entrega_data_horario" value="{{pedidoPlano.entrega_data_horario}}" readonly size="50"><br><br>
+
+          {{#if pedidoPlano.frete_opcao}}
+          <label>Opção de Frete Escolhida:</label><br>
+          <input type="text" value="{{pedidoPlano.frete_opcao}} (R$ {{pedidoPlano.frete_preco}})" readonly size="50"><br><br>
+
+          <label>Melhor Envio - Status de Emissão:</label><br>
+          {{#if pedidoPlano.frete_link_impressao}}
+            <span style="color: green; font-weight: bold;">Etiqueta Gerada!</span><br><br>
+            <a href="{{pedidoPlano.frete_link_impressao}}" target="_blank" style="padding: 8px 15px; background: #000; color: #fff; text-decoration: none; display: inline-block; font-weight: bold; border: 1px solid #000;">Visualizar Etiqueta (PDF)</a><br><br>
+          {{else}}
+            <span style="color: #d32f2f; font-weight: bold;">Etiqueta não emitida</span><br><br>
+            <button type="button" id="btn-emitir" onclick="emitirEtiqueta({{pedidoPlano.codigo}})" style="padding: 8px 15px; background: #fff; color: #000; font-weight: bold; border: 2px solid #000; cursor: pointer;">Emitir Etiqueta de Envio</button><br><br>
+          {{/if}}
+          {{/if}}
     </fieldset>      
 
     <br />
@@ -69,3 +83,34 @@
 
 
   </form>
+
+<script>
+async function emitirEtiqueta(codigo) {
+    const btn = document.getElementById('btn-emitir');
+    if (!confirm('Deseja realmente debitar do saldo sandbox e emitir a etiqueta no Melhor Envio?')) return;
+
+    btn.innerText = 'Processando Emissão...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`/pedidos/emitir-etiqueta/${codigo}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert('Etiqueta gerada com sucesso! Abrindo link de impressão.');
+            window.open(data.url, '_blank');
+            window.location.reload();
+        } else {
+            alert('Erro ao emitir etiqueta: ' + (data.erro || 'Desconhecido'));
+        }
+    } catch (err) {
+        alert('Erro ao se conectar ao servidor.');
+    } finally {
+        btn.innerText = 'Emitir Etiqueta de Envio';
+        btn.disabled = false;
+    }
+}
+</script>

@@ -104,3 +104,42 @@ input {
     z-index: 100;
     overflow-y: auto;
 }
+
+/* Opções de Frete */
+.frete-opcao-card {
+    border: 1px solid #000;
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background-color: #fff;
+    transition: all 0.2s ease;
+    font-size: 0.95em;
+}
+
+.frete-opcao-card:hover {
+    background-color: #f5f5f5;
+}
+
+.frete-opcao-card.selecionado {
+    background-color: #000;
+    color: #fff;
+}
+
+.frete-opcao-card input[type="radio"] {
+    margin-right: 12px;
+    cursor: pointer;
+    accent-color: #000;
+}
+
+.frete-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.frete-preco {
+    font-weight: bold;
+}
+

@@ -13,7 +13,6 @@
     <header class="barra-navegacao">
         <h1 class="logotipo">Loja de Cestas</h1>
         <div class="acoes-usuario">
-            <span id="user-greeting" style="display: none; margin-right: 15px;"></span>
             <button id="cart-toggle-btn">Carrinho (<span id="cart-count">0</span>)</button>
         </div>
     </header>
@@ -28,28 +27,6 @@
         </section>
 
 
-        <section id="view-auth" class="tela">
-            <h2>Identifique-se</h2>
-            <div style="margin-bottom: 20px;">
-                <button id="tab-login" onclick="app.alternarAbaAutenticacao('login')">Login</button>
-                <button id="tab-register" onclick="app.alternarAbaAutenticacao('register')">Cadastro</button>
-            </div>
-
-
-            <div id="form-login">
-                <label>Email: <input type="email" id="login-email"></label><br><br>
-                <button onclick="app.entrar()">Entrar</button>
-            </div>
-
-
-            <div id="form-register" style="display: none;">
-                <label>Nome: <input type="text" id="reg-nome"></label><br><br>
-                <label>Telefone: <input type="text" id="reg-tel"></label><br><br>
-                <button onclick="app.cadastrar()">Cadastrar</button>
-            </div>
-        </section>
-
-
         <section id="view-selection" class="tela">
             <div style="margin-bottom: 20px;">
                 <button class="etapa" data-category="cesta" onclick="app.carregarCategoria('cesta')">1.
@@ -57,7 +34,7 @@
                 <button class="etapa" data-category="bebida" onclick="app.carregarCategoria('bebida')">2.
                     Bebidas</button>
                 <button class="etapa" data-category="item_comestivel"
-                    onclick="app.carregarCategoria('item_comestivel')">3. Comestíveis</button>
+                     onclick="app.carregarCategoria('item_comestivel')">3. Comestíveis</button>
                 <button class="etapa" data-category="decoracao_cesta"
                     onclick="app.carregarCategoria('decoracao_cesta')">4. Decoração</button>
                 <button class="etapa" data-category="cartao_de_mensagem"
@@ -78,15 +55,39 @@
 
         <section id="view-checkout" class="tela">
             <h2>Finalizar Pedido</h2>
-            <p><strong>Comprador:</strong> <span id="checkout-cli-nome"></span> | <strong>Tel:</strong> <span
-                    id="checkout-cli-tel"></span></p>
-            <br>
-            <label>Seu CPF/CNPJ: <input type="text" id="cli-cpf"></label><br><br>
+            
+            <h3>Dados do Comprador</h3>
+            <label>Seu Nome: <input type="text" id="cli-nome" placeholder="Digite seu nome completo" style="width: 100%; max-width: 400px;"></label><br><br>
+            <label>Seu Telefone: <input type="text" id="cli-tel" placeholder="(00) 00000-0000"></label><br><br>
+            <label>Seu CPF/CNPJ: <input type="text" id="cli-cpf" placeholder="000.000.000-00"></label><br><br>
 
             <h3>Dados de Entrega</h3>
-            <label>Destinatário: <input type="text" id="dest-nome"></label><br><br>
-            <label>Endereço: <input type="text" id="dest-end"></label><br><br>
-            <label>Data/Hora: <input type="datetime-local" id="dest-data"></label><br><br>
+            <label>Destinatário: <input type="text" id="dest-nome" placeholder="Nome de quem vai receber" style="width: 100%; max-width: 400px;"></label><br><br>
+            
+            <label>CEP de Entrega: <input type="text" id="dest-cep" placeholder="00000-000" maxlength="9"></label>
+            <button type="button" onclick="app.calcularFrete()" style="margin-left: 10px;">Calcular Frete</button><br><br>
+            
+            <div id="frete-opcoes" style="margin-bottom: 20px; display: none;">
+                <h4>Selecione a opção de envio:</h4>
+                <div id="frete-lista-opcoes" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; max-width: 450px;"></div>
+            </div>
+
+            <!-- Campos de endereço preenchidos automaticamente pelo CEP -->
+            <div id="endereco-detalhes" style="display: none; margin-bottom: 20px;">
+                <label>Rua/Avenida: <input type="text" id="dest-rua" readonly style="width: 100%; max-width: 400px; background-color: #f5f5f5;"></label><br><br>
+                <label>Bairro: <input type="text" id="dest-bairro" readonly style="width: 100%; max-width: 400px; background-color: #f5f5f5;"></label><br><br>
+                <label>Cidade/UF: <input type="text" id="dest-cidade-uf" readonly style="width: 100%; max-width: 400px; background-color: #f5f5f5;"></label><br><br>
+                <label>Número: <input type="text" id="dest-numero" placeholder="Digite apenas o número" style="font-weight: bold; border: 2px solid #000;"></label><br><br>
+                <label>Complemento (Opcional): <input type="text" id="dest-complemento" placeholder="Apto, Bloco, etc." style="width: 100%; max-width: 400px;"></label><br><br>
+            </div>
+            
+            <label>Data/Hora da Entrega: <input type="datetime-local" id="dest-data"></label><br><br>
+
+            <h3>Resumo do Pedido</h3>
+            <p>Subtotal dos Itens: <span id="checkout-subtotal">R$ 0,00</span></p>
+            <p>Valor do Frete: <span id="checkout-frete">Não selecionado</span></p>
+            <p><strong>Total Geral: <span id="checkout-total-geral" style="font-size: 1.2em;">R$ 0,00</span></strong></p>
+            <br>
 
             <h3>Cartão (Opcional)</h3>
             <label>Mensagem que irá no cartão:<br><textarea id="mensagem-cartao" rows="4"
@@ -104,6 +105,16 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2>Carrinho</h2>
             <button id="close-cart-btn">Fechar (X)</button>
+        </div>
+        <div id="cart-volume-container" style="display: none; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 5px;">
+                <strong>Espaço Ocupado</strong>
+                <span id="cart-volume-text">0%</span>
+            </div>
+            <div style="width: 100%; height: 12px; background-color: #eee; border-radius: 6px; overflow: hidden; border: 1px solid #ccc;">
+                <div id="cart-volume-bar" style="width: 0%; height: 100%; background-color: #000; transition: width 0.3s, background-color 0.3s;"></div>
+            </div>
+            <small id="cart-volume-warning" style="display: none; color: red; font-size: 0.75em; margin-top: 5px;">A cesta está no limite máximo!</small>
         </div>
         <div id="cart-items-container"></div>
         <div style="margin-top: 20px; border-top: 1px solid #000; padding-top: 10px;">

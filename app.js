@@ -3,6 +3,8 @@ const cors = require('cors');
 const exphbs = require('express-handlebars');
 const handlebars = require('handlebars');
 const { Sequelize, Op } = require('sequelize');
+const axios = require('axios');
+
 
 
 const app = express();
@@ -59,7 +61,12 @@ const Produto = sequelize.define('produtos', {
     quantidade_estoque:{ type: Sequelize.INTEGER,      allowNull: false },
     preco:             { type: Sequelize.DECIMAL(10,2),allowNull: false },
     categoria:         { type: Sequelize.STRING(30),   allowNull: false },
-    foto:              { type: Sequelize.STRING(255),  allowNull: false }
+    foto:              { type: Sequelize.STRING(255),  allowNull: false },
+    altura:            { type: Sequelize.FLOAT,        allowNull: true },
+    largura:           { type: Sequelize.FLOAT,        allowNull: true },
+    comprimento:       { type: Sequelize.FLOAT,        allowNull: true },
+    volume:            { type: Sequelize.FLOAT,        allowNull: true },
+    fator_empilhamento:{ type: Sequelize.FLOAT,        allowNull: true }
 }, { createdAt: false, updatedAt: false });
 
 const Pedido = sequelize.define('pedidos', {
@@ -73,7 +80,11 @@ const Pedido = sequelize.define('pedidos', {
     entrega_destinatario_endereco:{ type: Sequelize.STRING(100), allowNull: false },
     entrega_data_horario:        { type: Sequelize.DATE,         allowNull: false },
     mensagem_cartao:             { type: Sequelize.TEXT,         allowNull: true },
-    data_criacao:                { type: Sequelize.DATE,         allowNull: false }
+    data_criacao:                { type: Sequelize.DATE,         allowNull: false },
+    frete_opcao:                 { type: Sequelize.STRING(100),  allowNull: true },
+    frete_preco:                 { type: Sequelize.DECIMAL(10,2),allowNull: true },
+    frete_etiqueta_id:           { type: Sequelize.STRING(100),  allowNull: true },
+    frete_link_impressao:        { type: Sequelize.TEXT,         allowNull: true }
 }, { createdAt: false, updatedAt: false });
 
 const Cliente = sequelize.define('clientes', {
@@ -216,7 +227,8 @@ app.get('/pedidos/:codigoPedido', bloquearAcessoExterno, async (req, res) => {
 
 app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
     const { cliente_nome, cliente_cpf_cnpj, cliente_telefone, lista_codigos_produtos,
-            preco_total, entrega_destinatario_nome, entrega_destinatario_endereco, entrega_data_horario, mensagem_cartao } = req.body;
+            preco_total, entrega_destinatario_nome, entrega_destinatario_endereco, entrega_data_horario, mensagem_cartao,
+            frete_opcao, frete_preco, frete_opcao_id } = req.body;
 
     if (!cliente_nome || !cliente_cpf_cnpj || !cliente_telefone || !lista_codigos_produtos ||
         !preco_total || !entrega_destinatario_nome || !entrega_destinatario_endereco || !entrega_data_horario) {
@@ -230,7 +242,8 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
                 ? JSON.stringify(lista_codigos_produtos)
                 : lista_codigos_produtos,
             preco_total, entrega_destinatario_nome, entrega_destinatario_endereco,
-            entrega_data_horario, mensagem_cartao, data_criacao: new Date()
+            entrega_data_horario, mensagem_cartao, data_criacao: new Date(),
+            frete_opcao, frete_preco, frete_opcao_id
         });
         res.status(201).json({ mensagem: 'Pedido cadastrado com sucesso', pedido: novoPedido });
     } catch (err) {
@@ -272,6 +285,189 @@ app.post('/clientes/login', cors(corsOptions), async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ erro: 'Erro ao efetuar login' });
+    }
+});
+
+// ─── Rotas do Melhor Envio ───────────────────────────────────────────────────
+
+const MELHOR_ENVIO_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI5NTYiLCJqdGkiOiIyZTAwNzRkNDYyM2Q1MGNjNTI4NTEyZmIzMDA4YzMzYTczYjZkOTYzMmUyOTRhMzk3MDI3MzAxMDUxODkyZjc5ZWJkYTM2MTIxZjgxMmIwNyIsImlhdCI6MTc3OTgyMTg1MS40NjAwNTIsIm5iZiI6MTc3OTgyMTg1MS40NjAwNTUsImV4cCI6MTgxMTM1Nzg1MS40NTA2NzMsInN1YiI6ImExZGZiMzlkLWY2NzUtNDM0MC1iYTcyLWY4MjQzOTEyOTdhZSIsInNjb3BlcyI6WyJjYXJ0LXJlYWQiLCJjYXJ0LXdyaXRlIiwiY29tcGFuaWVzLXJlYWQiLCJjb21wYW5pZXMtd3JpdGUiLCJjb3Vwb25zLXJlYWQiLCJjb3Vwb25zLXdyaXRlIiwibm90aWZpY2F0aW9ucy1yZWFkIiwib3JkZXJzLXJlYWQiLCJwcm9kdWN0cy1yZWFkIiwicHJvZHVjdHMtZGVzdHJveSIsInByb2R1Y3RzLXdyaXRlIiwicHVyY2hhc2VzLXJlYWQiLCJzaGlwcGluZy1jYWxjdWxhdGUiLCJzaGlwcGluZy1jYW5jZWwiLCJzaGlwcGluZy1jaGVja291dCIsInNoaXBwaW5nLWNvbXBhbmllcyIsInNoaXBwaW5nLWdlbmVyYXRlIiwic2hpcHBpbmctcHJldmlldyIsInNoaXBwaW5nLXByaW50Iiwic2hpcHBpbmctc2hhcmUiLCJzaGlwcGluZy10cmFja2luZyIsImVjb21tZXJjZS1zaGlwcGluZyIsInRyYW5zYWN0aW9ucy1yZWFkIiwidXNlcnMtcmVhZCIsInVzZXJzLXdyaXRlIiwid2ViaG9va3MtcmVhZCIsIndlYmhvb2tzLXdyaXRlIiwid2ViaG9va3MtZGVsZXRlIiwidGRlYWxlci13ZWJob29rIl19.ezZ-v3ayp1--3thsNuCw6S63gxUbkge0vUz_P0i1nK04IJbqRmAzDOQz0GycWPsfsVK-e50vBHZ3v9ReY0R_uwy_y22yE99XpmKHTMzJzurTGL9ZYR9PN__goqrwZzXGdb46gPE5Pi2_-4UvtJn5YBCcegzY2JAiOkKV0tCe8f4LF2LoEQlmnblEc9iJHmVZVMNBsVcBShgc77tU035E1WAQ9B1myCG0PkwxCyvP7qLtbuX4_f4qOBv4gGnSlcLB_n787hS2zImdvtul7UA8jSFC4pOV1lje4TnMquqRwjEXHu2-p1_jmxvngJDLXWdHPg9wTkR3BVQWnzT34BwJpHOXdW6a629fjfdOytxkppa8rMRNpBfe0-9XvWpv-_wROYWj2f8_YGhZaaqZN1lcCdwYPkr_ukoUfriQz77URuajVksE9N-oOEabsYmGh63LWXaETLGqV29Zho5ajvCGSvGDQAOFScB-I4H_JkJJee5gcZ43KoTEoWmYtbqxVvy3D6MXPyeXeZSbJs0CbyIz-sH9mCFYheICYd6X04vnAiiyXaPbXrE0Zdjgy9QCtDqCH_fHhuqhAxqXzoVucBhe8lLnnnO3m1nKmFA7motUfyvISZyMpPx_AXswG4rVGMd9yvLco35czypn6vuWbtZ15VH36pzfBhoPZ89Z9YJFLrQ';
+const MELHOR_ENVIO_CEP_ORIGEM = '96415200';
+const MELHOR_ENVIO_API_URL = 'https://sandbox.melhorenvio.com.br';
+
+app.post('/frete/calcular', cors(corsOptions), async (req, res) => {
+    const { cepDestino, produtos } = req.body;
+    if (!cepDestino) {
+        return res.status(400).json({ erro: 'CEP de destino é obrigatório.' });
+    }
+
+    try {
+        const productsPayload = (produtos && produtos.length > 0) ? produtos.map(p => ({
+            name: p.nome || 'Item da Cesta',
+            quantity: 1,
+            unitary_weight: 0.3,
+            unitary_value: parseFloat(p.preco) || 10.00,
+            length: 15,
+            width: 15,
+            height: 10
+        })) : [{
+            name: 'Cesta de Presente',
+            quantity: 1,
+            unitary_weight: 1.5,
+            unitary_value: 50.00,
+            length: 30,
+            width: 25,
+            height: 20
+        }];
+
+        const response = await axios.post(`${MELHOR_ENVIO_API_URL}/api/v2/me/shipment/calculate`, {
+            from: { postal_code: MELHOR_ENVIO_CEP_ORIGEM },
+            to: { postal_code: cepDestino },
+            products: productsPayload
+        }, {
+            headers: {
+                'Authorization': `Bearer ${MELHOR_ENVIO_TOKEN}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'EmporioSobreiro (suporte@sobreiro.com)'
+            }
+        });
+
+        const opcoesFormatadas = response.data.map(item => ({
+            id: item.id,
+            nome: item.name,
+            empresa: item.company.name,
+            preco: item.price,
+            prazo: item.delivery_time,
+            erro: item.error || null
+        }));
+
+        res.json(opcoesFormatadas);
+    } catch (err) {
+        console.error('Erro ao calcular frete no Melhor Envio:', err.response?.data || err.message);
+        res.status(500).json({ erro: 'Erro ao calcular o frete no Melhor Envio.' });
+    }
+});
+
+app.post('/pedidos/emitir-etiqueta/:codigo', bloquearAcessoExterno, async (req, res) => {
+    try {
+        const pedido = await Pedido.findByPk(req.params.codigo);
+        if (!pedido) {
+            return res.status(404).json({ erro: 'Pedido não encontrado.' });
+        }
+
+        const parts = pedido.entrega_destinatario_endereco.split(' - ');
+        const cepPart = parts[0]?.replace('CEP:', '').trim() || '96415200';
+        const addressText = parts[1] || pedido.entrega_destinatario_endereco;
+
+        const addrParts = addressText.split(',');
+        const logradouro = addrParts[0]?.trim() || 'Rua Principal';
+        const numero = addrParts[1]?.trim() || '123';
+        const bairro = addrParts[2]?.trim() || 'Centro';
+        
+        const cepDestino = cepPart.replace(/\D/g, '') || '96415200';
+        
+        let cidade = 'Bage';
+        let ufFinal = 'RS';
+        
+        try {
+            const viaCepRes = await axios.get(`https://viacep.com.br/ws/${cepDestino}/json/`);
+            if (viaCepRes.data && viaCepRes.data.uf) {
+                ufFinal = viaCepRes.data.uf;
+                cidade = viaCepRes.data.localidade;
+            }
+        } catch (e) {
+            console.error('Erro ao consultar ViaCEP no backend:', e.message);
+            // Fallback manual se a API falhar
+            if (addrParts[3]) {
+                const cidadeUf = addrParts[3].split('-');
+                cidade = cidadeUf[0]?.trim() || 'Bage';
+                const ufExt = cidadeUf[1]?.trim();
+                if (ufExt) ufFinal = ufExt.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase();
+            }
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${MELHOR_ENVIO_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'EmporioSobreiro (suporte@sobreiro.com)'
+        };
+
+        const cartPayload = {
+            service: parseInt(pedido.frete_opcao_id) || 1,
+            from: {
+                name: 'Emporio Sobreiro',
+                phone: '53999999999',
+                email: 'contato@sobreiro.com',
+                document: '83052443771', // CPF válido necessário pelo sandbox
+                address: 'Rua Principal',
+                number: '100',
+                district: 'Centro',
+                city: 'Bage',
+                state_abbr: 'RS',
+                postal_code: '96415200'
+            },
+            to: {
+                name: pedido.entrega_destinatario_nome,
+                phone: pedido.cliente_telefone || '53999999999',
+                email: 'cliente@gmail.com',
+                document: pedido.cliente_cpf_cnpj.replace(/\D/g, '') || '35182819077', // Fallback se cpf cliente for inválido
+                address: logradouro,
+                number: numero,
+                district: bairro,
+                city: cidade,
+                state_abbr: ufFinal,
+                postal_code: cepDestino
+            },
+            products: [{
+                name: 'Cesta de Presentes',
+                quantity: 1,
+                unitary_value: parseFloat(pedido.preco_total) || 50.00
+            }],
+            volumes: [{
+                height: 20,
+                width: 25,
+                length: 30,
+                weight: 1.5
+            }],
+            options: {
+                insurance_value: parseFloat(pedido.preco_total),
+                receipt: false,
+                own_hand: false,
+                reverse: false,
+                non_commercial: true
+            }
+        };
+
+        const cartRes = await axios.post(`${MELHOR_ENVIO_API_URL}/api/v2/me/cart`, cartPayload, { headers });
+        const shipmentId = cartRes.data.id;
+
+        await axios.post(`${MELHOR_ENVIO_API_URL}/api/v2/me/shipment/checkout`, {
+            orders: [shipmentId]
+        }, { headers });
+
+        await axios.post(`${MELHOR_ENVIO_API_URL}/api/v2/me/shipment/generate`, {
+            orders: [shipmentId]
+        }, { headers });
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const printRes = await axios.post(`${MELHOR_ENVIO_API_URL}/api/v2/me/shipment/print`, {
+            mode: 'public',
+            orders: [shipmentId]
+        }, { headers });
+
+        const printUrl = printRes.data.url;
+
+        await pedido.update({
+            frete_etiqueta_id: shipmentId,
+            frete_link_impressao: printUrl
+        });
+
+        res.json({ mensagem: 'Etiqueta gerada com sucesso!', url: printUrl });
+    } catch (err) {
+        console.error('Erro na emissão da etiqueta:', err.response?.data || err.message);
+        res.status(500).json({ erro: 'Erro ao emitir a etiqueta no Melhor Envio. Verifique os dados ou o saldo no sandbox.' });
     }
 });
 
