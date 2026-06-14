@@ -8,7 +8,7 @@ const axios = require('axios');
 
 
 const app = express();
-const PORTA = 3000;
+const PORTA = 3005;
 
 const corsOptions = {
     origin: ['http://172.26.3.157:3000', 'http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:5500']
@@ -55,45 +55,45 @@ sequelize.authenticate()
 
 // Modelos
 const Produto = sequelize.define('produtos', {
-    codigo:            { type: Sequelize.INTEGER,      primaryKey: true, autoIncrement: true },
-    nome:              { type: Sequelize.STRING(100),  allowNull: false },
-    descricao:         { type: Sequelize.TEXT,         allowNull: false },
-    quantidade_estoque:{ type: Sequelize.INTEGER,      allowNull: false },
-    preco:             { type: Sequelize.DECIMAL(10,2),allowNull: false },
-    categoria:         { type: Sequelize.STRING(30),   allowNull: false },
-    foto:              { type: Sequelize.STRING(255),  allowNull: false },
-    altura:            { type: Sequelize.FLOAT,        allowNull: true },
-    largura:           { type: Sequelize.FLOAT,        allowNull: true },
-    comprimento:       { type: Sequelize.FLOAT,        allowNull: true },
-    volume:            { type: Sequelize.FLOAT,        allowNull: true },
-    fator_empilhamento:{ type: Sequelize.FLOAT,        allowNull: true }
+    codigo: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
+    nome: { type: Sequelize.STRING(100), allowNull: false },
+    descricao: { type: Sequelize.TEXT, allowNull: false },
+    quantidade_estoque: { type: Sequelize.INTEGER, allowNull: false },
+    preco: { type: Sequelize.DECIMAL(10, 2), allowNull: false },
+    categoria: { type: Sequelize.STRING(30), allowNull: false },
+    foto: { type: Sequelize.STRING(255), allowNull: false },
+    altura: { type: Sequelize.FLOAT, allowNull: true },
+    largura: { type: Sequelize.FLOAT, allowNull: true },
+    comprimento: { type: Sequelize.FLOAT, allowNull: true },
+    volume: { type: Sequelize.FLOAT, allowNull: true },
+    fator_empilhamento: { type: Sequelize.FLOAT, allowNull: true }
 }, { createdAt: false, updatedAt: false });
 
 const Pedido = sequelize.define('pedidos', {
-    codigo:                      { type: Sequelize.INTEGER,      primaryKey: true, autoIncrement: true },
-    cliente_nome:                { type: Sequelize.STRING(100),  allowNull: false },
-    cliente_cpf_cnpj:            { type: Sequelize.STRING(100),  allowNull: false },
-    cliente_telefone:            { type: Sequelize.STRING(15),   allowNull: false },
-    lista_codigos_produtos:      { type: Sequelize.STRING(100),  allowNull: false },
-    preco_total:                 { type: Sequelize.DECIMAL(10,2),allowNull: false },
-    entrega_destinatario_nome:   { type: Sequelize.STRING(100),  allowNull: false },
-    entrega_destinatario_endereco:{ type: Sequelize.STRING(100), allowNull: false },
-    entrega_data_horario:        { type: Sequelize.DATE,         allowNull: false },
-    mensagem_cartao:             { type: Sequelize.TEXT,         allowNull: true },
-    data_criacao:                { type: Sequelize.DATE,         allowNull: false },
-    frete_opcao:                 { type: Sequelize.STRING(100),  allowNull: true },
-    frete_preco:                 { type: Sequelize.DECIMAL(10,2),allowNull: true },
-    frete_etiqueta_id:           { type: Sequelize.STRING(100),  allowNull: true },
-    frete_link_impressao:        { type: Sequelize.TEXT,         allowNull: true }
+    codigo: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
+    cliente_nome: { type: Sequelize.STRING(100), allowNull: false },
+    cliente_cpf_cnpj: { type: Sequelize.STRING(100), allowNull: false },
+    cliente_telefone: { type: Sequelize.STRING(15), allowNull: false },
+    lista_codigos_produtos: { type: Sequelize.STRING(100), allowNull: false },
+    preco_total: { type: Sequelize.DECIMAL(10, 2), allowNull: false },
+    entrega_destinatario_nome: { type: Sequelize.STRING(100), allowNull: false },
+    entrega_destinatario_endereco: { type: Sequelize.STRING(100), allowNull: false },
+    entrega_data_horario: { type: Sequelize.DATE, allowNull: false },
+    mensagem_cartao: { type: Sequelize.TEXT, allowNull: true },
+    data_criacao: { type: Sequelize.DATE, allowNull: false },
+    frete_opcao: { type: Sequelize.STRING(100), allowNull: true },
+    frete_preco: { type: Sequelize.DECIMAL(10, 2), allowNull: true },
+    frete_etiqueta_id: { type: Sequelize.STRING(100), allowNull: true },
+    frete_link_impressao: { type: Sequelize.TEXT, allowNull: true }
 }, { createdAt: false, updatedAt: false });
 
 const Cliente = sequelize.define('clientes', {
-    codigo:   { type: Sequelize.INTEGER,      primaryKey: true, autoIncrement: true },
-    nome:     { type: Sequelize.STRING(100),  allowNull: false },
-    email:    { type: Sequelize.STRING(100),  allowNull: false, unique: true },
-    telefone: { type: Sequelize.STRING(15),   allowNull: false },
-    senha:    { type: Sequelize.STRING(100),  allowNull: false },
-    endereco: { type: Sequelize.STRING(255),  allowNull: false }
+    codigo: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
+    nome: { type: Sequelize.STRING(100), allowNull: false },
+    email: { type: Sequelize.STRING(100), allowNull: false, unique: true },
+    telefone: { type: Sequelize.STRING(15), allowNull: false },
+    senha: { type: Sequelize.STRING(100), allowNull: false },
+    endereco: { type: Sequelize.STRING(255), allowNull: false }
 }, { createdAt: false, updatedAt: false });
 
 // Middlewares
@@ -165,12 +165,12 @@ app.get('/produtos/:codigoProduto', bloquearAcessoExterno, async (req, res) => {
 
 app.get('/produtos/categoria/:categoria', cors(corsOptions), async (req, res) => {
     const mapa = {
-        cesta:              'Cesta',
-        bebida:             'Bebida',
-        item_comestivel:    'Item comestível',
-        decoracao_cesta:    'Decoração',
+        cesta: 'Cesta',
+        bebida: 'Bebida',
+        item_comestivel: 'Item comestível',
+        decoracao_cesta: 'Decoração',
         cartao_de_mensagem: 'Cartão de mensagem',
-        presente_tematico:  'Presente temático'
+        presente_tematico: 'Presente temático'
     };
 
     const categoriaBD = mapa[req.params.categoria];
@@ -227,8 +227,8 @@ app.get('/pedidos/:codigoPedido', bloquearAcessoExterno, async (req, res) => {
 
 app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
     const { cliente_nome, cliente_cpf_cnpj, cliente_telefone, lista_codigos_produtos,
-            preco_total, entrega_destinatario_nome, entrega_destinatario_endereco, entrega_data_horario, mensagem_cartao,
-            frete_opcao, frete_preco, frete_opcao_id } = req.body;
+        preco_total, entrega_destinatario_nome, entrega_destinatario_endereco, entrega_data_horario, mensagem_cartao,
+        frete_opcao, frete_preco, frete_opcao_id } = req.body;
 
     if (!cliente_nome || !cliente_cpf_cnpj || !cliente_telefone || !lista_codigos_produtos ||
         !preco_total || !entrega_destinatario_nome || !entrega_destinatario_endereco || !entrega_data_horario) {
@@ -363,12 +363,61 @@ app.post('/pedidos/emitir-etiqueta/:codigo', bloquearAcessoExterno, async (req, 
         const logradouro = addrParts[0]?.trim() || 'Rua Principal';
         const numero = addrParts[1]?.trim() || '123';
         const bairro = addrParts[2]?.trim() || 'Centro';
-        
+
         const cepDestino = cepPart.replace(/\D/g, '') || '96415200';
-        
+
+        function isValidCPF(cpf) {
+            cpf = cpf.replace(/\D/g, '');
+            if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+            let soma = 0, resto;
+            for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i-1, i)) * (11 - i);
+            resto = (soma * 10) % 11;
+            if (resto === 10 || resto === 11) resto = 0;
+            if (resto !== parseInt(cpf.substring(9, 10))) return false;
+            soma = 0;
+            for (let i = 1; i <= 10; i++) soma += parseInt(cpf.substring(i-1, i)) * (12 - i);
+            resto = (soma * 10) % 11;
+            if (resto === 10 || resto === 11) resto = 0;
+            if (resto !== parseInt(cpf.substring(10, 11))) return false;
+            return true;
+        }
+
+        function isValidCNPJ(cnpj) {
+            cnpj = cnpj.replace(/\D/g, '');
+            if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+            let tamanho = cnpj.length - 2;
+            let numeros = cnpj.substring(0, tamanho);
+            let digitos = cnpj.substring(tamanho);
+            let soma = 0, pos = tamanho - 7;
+            for (let i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+            let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+            if (resultado != digitos.charAt(0)) return false;
+            tamanho = tamanho + 1;
+            numeros = cnpj.substring(0, tamanho);
+            soma = 0, pos = tamanho - 7;
+            for (let i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+            resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+            if (resultado != digitos.charAt(1)) return false;
+            return true;
+        }
+
+        function getValidDocument(doc) {
+            if (!doc) return '35182819077';
+            const cleanDoc = doc.replace(/\D/g, '');
+            if (cleanDoc.length === 11 && isValidCPF(cleanDoc)) return cleanDoc;
+            if (cleanDoc.length === 14 && isValidCNPJ(cleanDoc)) return cleanDoc;
+            return '35182819077';
+        }
+
         let cidade = 'Bage';
         let ufFinal = 'RS';
-        
+
         try {
             const viaCepRes = await axios.get(`https://viacep.com.br/ws/${cepDestino}/json/`);
             if (viaCepRes.data && viaCepRes.data.uf) {
@@ -411,7 +460,7 @@ app.post('/pedidos/emitir-etiqueta/:codigo', bloquearAcessoExterno, async (req, 
                 name: pedido.entrega_destinatario_nome,
                 phone: pedido.cliente_telefone || '53999999999',
                 email: 'cliente@gmail.com',
-                document: pedido.cliente_cpf_cnpj.replace(/\D/g, '') || '35182819077', // Fallback se cpf cliente for inválido
+                document: getValidDocument(pedido.cliente_cpf_cnpj), // Fallback se cpf cliente for inválido
                 address: logradouro,
                 number: numero,
                 district: bairro,
