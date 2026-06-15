@@ -435,13 +435,15 @@ const app = {
             });
 
             if (res.ok) {
-                alert('Pedido realizado com sucesso!');
+                const data = await res.json();
                 this.estado.carrinho = [];
                 this.estado.capacidadeCesta = null;
                 this.estado.freteSelecionado = null;
                 this.atualizarInterfaceCarrinho();
-                this.mostrarTela('view-home');
                 document.querySelectorAll('input').forEach(i => i.value = '');
+                
+                // Redireciona para o checkout do Mercado Pago
+                window.location.href = data.init_point;
             } else {
                 const err = await res.json();
                 alert('Erro ao realizar pedido: ' + (err.erro || 'Desconhecido'));

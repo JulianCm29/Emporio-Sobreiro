@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retorno do Pagamento</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        .status-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: {{cor}};
+        }
+        h1 {
+            color: #1f2937;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #4b5563;
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        .btn-home {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .btn-home:hover {
+            background-color: #1d4ed8;
+        }
+        .order-info {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        .order-info strong {
+            color: #111827;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="status-icon">
+        {{#if (eq pedido.status_pagamento 'pago')}}
+            ✅
+        {{else if (eq pedido.status_pagamento 'cancelado')}}
+            ❌
+        {{else}}
+            ⏳
+        {{/if}}
+    </div>
+    
+    <h1>{{mensagem}}</h1>
+    
+    <div class="order-info">
+        <p style="margin: 5px 0;"><strong>Pedido:</strong> #{{pedido.codigo}}</p>
+        <p style="margin: 5px 0;"><strong>Cliente:</strong> {{pedido.cliente_nome}}</p>
+        <p style="margin: 5px 0;"><strong>Total a Pagar:</strong> R$ {{pedido.preco_total}}</p>
+        <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: {{cor}}; font-weight: bold; text-transform: uppercase;">{{pedido.status_pagamento}}</span></p>
+    </div>
+
+    <p>Obrigado por comprar conosco. Você pode acompanhar a entrega do seu pedido informando seus dados posteriormente.</p>
+
+    <a href="/" class="btn-home">Voltar para a Loja</a>
+</div>
+
+</body>
+</html>

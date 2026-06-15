@@ -12,6 +12,9 @@
     <label for="preco_total">Preço total:</label><br>
     <input type="text" id="preco_total" name="preco_total" value="{{pedidoPlano.preco_total}}" readonly maxlength="100" size="50"><br><br>
 
+    <label for="status_pagamento">Status do Pagamento:</label><br>
+    <input type="text" id="status_pagamento" name="status_pagamento" value="{{pedidoPlano.status_pagamento}}" readonly maxlength="100" size="50" style="text-transform: uppercase; font-weight: bold; color: {{#if (eq pedidoPlano.status_pagamento 'pago')}}green{{else if (eq pedidoPlano.status_pagamento 'cancelado')}}red{{else}}orange{{/if}};"><br><br>
+
     <fieldset>
       <legend>Dados do cliente:</legend>
 

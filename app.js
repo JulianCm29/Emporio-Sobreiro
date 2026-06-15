@@ -1,4 +1,6 @@
+require('dotenv').config();
 const express = require('express');
+const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN;
 const cors = require('cors');
 const exphbs = require('express-handlebars');
 const handlebars = require('handlebars');
@@ -84,7 +86,9 @@ const Pedido = sequelize.define('pedidos', {
     frete_opcao: { type: Sequelize.STRING(100), allowNull: true },
     frete_preco: { type: Sequelize.DECIMAL(10, 2), allowNull: true },
     frete_etiqueta_id: { type: Sequelize.STRING(100), allowNull: true },
-    frete_link_impressao: { type: Sequelize.TEXT, allowNull: true }
+    frete_link_impressao: { type: Sequelize.TEXT, allowNull: true },
+    status_pagamento: { type: Sequelize.STRING(20), allowNull: false, defaultValue: 'pendente' },
+    mercadopago_preference_id: { type: Sequelize.STRING(100), allowNull: true }
 }, { createdAt: false, updatedAt: false });
 
 const Cliente = sequelize.define('clientes', {
@@ -243,12 +247,95 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
                 : lista_codigos_produtos,
             preco_total, entrega_destinatario_nome, entrega_destinatario_endereco,
             entrega_data_horario, mensagem_cartao, data_criacao: new Date(),
-            frete_opcao, frete_preco, frete_opcao_id
+            frete_opcao, frete_preco, frete_opcao_id,
+            status_pagamento: 'pendente'
         });
-        res.status(201).json({ mensagem: 'Pedido cadastrado com sucesso', pedido: novoPedido });
+
+        const preferenceItems = [
+            {
+                title: 'Cesta de Presentes Emporio Sobreiro',
+                description: `Pedido ${novoPedido.codigo}`,
+                quantity: 1,
+                currency_id: 'BRL',
+                unit_price: Number((parseFloat(preco_total) - (parseFloat(frete_preco) || 0)).toFixed(2))
+            }
+        ];
+
+        if (frete_preco && parseFloat(frete_preco) > 0) {
+            preferenceItems.push({
+                title: 'Frete: ' + frete_opcao,
+                quantity: 1,
+                currency_id: 'BRL',
+                unit_price: Number(parseFloat(frete_preco).toFixed(2))
+            });
+        }
+
+        const cleanId = cliente_cpf_cnpj.replace(/\D/g, '');
+        const preferenceData = {
+            items: preferenceItems,
+            payer: {
+                name: cliente_nome,
+                identification: {
+                    type: cleanId.length > 11 ? 'CNPJ' : 'CPF',
+                    number: cleanId
+                }
+            },
+            back_urls: {
+                success: `http://localhost:3005/pedidos/retorno`,
+                failure: `http://localhost:3005/pedidos/retorno`,
+                pending: `http://localhost:3005/pedidos/retorno`
+            },
+            external_reference: novoPedido.codigo.toString()
+        };
+
+        const mpRes = await axios.post('https://api.mercadopago.com/checkout/preferences', preferenceData, {
+            headers: {
+                'Authorization': `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const init_point = mpRes.data.sandbox_init_point || mpRes.data.init_point;
+        
+        await novoPedido.update({ mercadopago_preference_id: mpRes.data.id });
+
+        res.status(201).json({ mensagem: 'Pedido cadastrado com sucesso', init_point });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ erro: 'Erro ao cadastrar o pedido' });
+        console.error('Erro na integração com Mercado Pago:', err.response ? err.response.data : err.message);
+        res.status(500).json({ erro: 'Erro ao criar o pagamento no Mercado Pago. Verifique suas credenciais de teste.' });
+    }
+});
+
+app.get('/pedidos/retorno', async (req, res) => {
+    const { collection_status, status, external_reference, preference_id } = req.query;
+
+    if (!external_reference) {
+        return res.status(400).send('Referência do pedido não encontrada.');
+    }
+
+    try {
+        const pedido = await Pedido.findByPk(external_reference);
+        if (!pedido) {
+            return res.status(404).send('Pedido não encontrado.');
+        }
+
+        let mensagem = 'O pagamento está pendente ou sendo processado.';
+        let cor = '#f59e0b'; // laranja
+
+        if (status === 'approved' || collection_status === 'approved') {
+            await pedido.update({ status_pagamento: 'pago' });
+            mensagem = 'Pagamento Aprovado com Sucesso!';
+            cor = '#10b981'; // verde
+        } else if (status === 'rejected' || status === 'null') {
+            await pedido.update({ status_pagamento: 'cancelado' });
+            mensagem = 'O pagamento foi recusado ou cancelado.';
+            cor = '#ef4444'; // vermelho
+        }
+
+        res.render('retornoPedido', { layout: false, pedido: pedido.get({ plain: true }), mensagem, cor });
+    } catch (e) {
+        console.error(e);
+        res.status(500).send('Erro ao processar o retorno do pagamento.');
     }
 });
 
@@ -522,6 +609,10 @@ app.post('/pedidos/emitir-etiqueta/:codigo', bloquearAcessoExterno, async (req, 
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-app.listen(PORTA, '0.0.0.0', () => {
-    console.log(`Servidor rodando em http://localhost:${PORTA}`);
+sequelize.sync({ alter: true }).then(() => {
+    app.listen(PORTA, '0.0.0.0', () => {
+        console.log(`Servidor rodando em http://localhost:${PORTA} e Banco Sincronizado!`);
+    });
+}).catch(err => {
+    console.error('Erro ao sincronizar banco de dados:', err);
 });

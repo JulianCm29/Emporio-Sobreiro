@@ -7,6 +7,7 @@
       <td><b>Data do Pedido</b></td>
       <td><b>Cliente / CPF/CNPJ</b></td>
       <td><b>Total a pagar</b></td>
+      <td><b>Status do Pagamento</b></td>
       <td><b>Operações</b></td>
     </tr>
 
@@ -16,6 +17,7 @@
       <td>{{data_criacao}}</td>
       <td>{{cliente_nome}} / {{cliente_cpf_cnpj}}</td>
       <td>{{preco_total}}</td>
+      <td style="text-transform: uppercase; font-weight: bold; color: {{#if (eq status_pagamento 'pago')}}green{{else if (eq status_pagamento 'cancelado')}}red{{else}}orange{{/if}};">{{status_pagamento}}</td>
       <td><a href="/pedidos/{{codigo}}">Consultar</a></td>
     </tr>
     {{/each}}
