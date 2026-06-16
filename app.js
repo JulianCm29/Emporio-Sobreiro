@@ -188,7 +188,7 @@ app.get('/produtos/categoria/:categoria', cors(corsOptions), async (req, res) =>
         res.status(500).json({ erro: 'Erro ao buscar produtos da categoria' });
     }
 });
-
+const filaPedidos = [];
 // ─── Rotas de Pedidos ─────────────────────────────────────────────────────────
 
 app.get('/pedidos/listar-todos', bloquearAcessoExterno, async (req, res) => {
@@ -229,6 +229,8 @@ app.get('/pedidos/:codigoPedido', bloquearAcessoExterno, async (req, res) => {
     }
 });
 
+const filaPedidos = [];
+
 app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
     const { cliente_nome, cliente_cpf_cnpj, cliente_telefone, lista_codigos_produtos,
         preco_total, entrega_destinatario_nome, entrega_destinatario_endereco, entrega_data_horario, mensagem_cartao,
@@ -240,6 +242,13 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
     }
 
     try {
+        filaPedidos.push({
+            cliente: cliente_nome,
+            horario: new Date()
+        });
+
+        console.log('Fila de pedidos:', filaPedidos);
+
         const codigosProdutos = Array.isArray(lista_codigos_produtos)
             ? lista_codigos_produtos.map(Number)
             : lista_codigos_produtos.split(',').map(c => Number(c.trim()));
@@ -257,6 +266,7 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
         });
 
         if (produtosBD.length !== Object.keys(quantidadesCompradas).length) {
+            filaPedidos.shift();
             return res.status(400).json({ erro: 'Um ou mais produtos do carrinho não foram encontrados.' });
         }
 
@@ -264,6 +274,7 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
             const quantidadePedida = quantidadesCompradas[produto.codigo];
 
             if (produto.quantidade_estoque < quantidadePedida) {
+                filaPedidos.shift();
                 return res.status(400).json({
                     erro: `Estoque insuficiente para o produto "${produto.nome}". Disponível: ${produto.quantidade_estoque}, pedido: ${quantidadePedida}.`
                 });
@@ -310,6 +321,7 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
         }
 
         const cleanId = cliente_cpf_cnpj.replace(/\D/g, '');
+
         const preferenceData = {
             items: preferenceItems,
             payer: {
@@ -333,6 +345,21 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
                 'Content-Type': 'application/json'
             }
         });
+
+        const init_point = mpRes.data.sandbox_init_point || mpRes.data.init_point;
+
+        await novoPedido.update({ mercadopago_preference_id: mpRes.data.id });
+
+        filaPedidos.shift();
+
+        res.status(201).json({ mensagem: 'Pedido cadastrado com sucesso', init_point });
+
+    } catch (err) {
+        filaPedidos.shift();
+        console.error('Erro na integração com Mercado Pago:', err.response ? err.response.data : err.message);
+        res.status(500).json({ erro: 'Erro ao criar o pagamento no Mercado Pago. Verifique suas credenciais de teste.' });
+    }
+});
 
         const init_point = mpRes.data.sandbox_init_point || mpRes.data.init_point;
 
