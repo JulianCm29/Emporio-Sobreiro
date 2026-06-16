@@ -240,6 +240,45 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
     }
 
     try {
+        const codigosProdutos = Array.isArray(lista_codigos_produtos)
+            ? lista_codigos_produtos.map(Number)
+            : lista_codigos_produtos.split(',').map(c => Number(c.trim()));
+
+        const quantidadesCompradas = {};
+
+        codigosProdutos.forEach(codigo => {
+            quantidadesCompradas[codigo] = (quantidadesCompradas[codigo] || 0) + 1;
+        });
+
+        const produtosBD = await Produto.findAll({
+            where: {
+                codigo: Object.keys(quantidadesCompradas)
+            }
+        });
+
+        if (produtosBD.length !== Object.keys(quantidadesCompradas).length) {
+            return res.status(400).json({ erro: 'Um ou mais produtos do carrinho não foram encontrados.' });
+        }
+
+        for (const produto of produtosBD) {
+            const quantidadePedida = quantidadesCompradas[produto.codigo];
+
+            if (produto.quantidade_estoque < quantidadePedida) {
+                return res.status(400).json({
+                    erro: `Estoque insuficiente para o produto "${produto.nome}". Disponível: ${produto.quantidade_estoque}, pedido: ${quantidadePedida}.`
+                });
+            }
+        }
+
+        for (const produto of produtosBD) {
+            const quantidadePedida = quantidadesCompradas[produto.codigo];
+
+            await Produto.update(
+                { quantidade_estoque: produto.quantidade_estoque - quantidadePedida },
+                { where: { codigo: produto.codigo } }
+            );
+        }
+
         const novoPedido = await Pedido.create({
             cliente_nome, cliente_cpf_cnpj, cliente_telefone,
             lista_codigos_produtos: Array.isArray(lista_codigos_produtos)
@@ -296,7 +335,7 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
         });
 
         const init_point = mpRes.data.sandbox_init_point || mpRes.data.init_point;
-        
+
         await novoPedido.update({ mercadopago_preference_id: mpRes.data.id });
 
         res.status(201).json({ mensagem: 'Pedido cadastrado com sucesso', init_point });
