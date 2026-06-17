@@ -3,7 +3,6 @@ const express = require('express');
 const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN;
 const cors = require('cors');
 const exphbs = require('express-handlebars');
-const handlebars = require('handlebars');
 const { Sequelize, Op } = require('sequelize');
 const axios = require('axios');
 
@@ -29,17 +28,17 @@ function bloquearAcessoExterno(req, res, next) {
 app.engine('.handlebars', exphbs.engine({
     extname: '.handlebars',
     defaultLayout: 'main',
-    helpers: { eq: (a, b) => a === b }
+    helpers: {
+        eq: (a, b) => a === b,
+        contains: function (str, substring, options) {
+            if (typeof str === 'string' && str.toLowerCase().includes(substring.toLowerCase())) {
+                return options.fn(this);
+            }
+            return options.inverse(this);
+        }
+    }
 }));
 app.set('view engine', 'handlebars');
-
-// Helper para destacar produto do tipo Cesta nas views
-handlebars.registerHelper('contains', function (str, substring, options) {
-    if (typeof str === 'string' && str.toLowerCase().includes(substring.toLowerCase())) {
-        return options.fn(this);
-    }
-    return options.inverse(this);
-});
 
 // Banco de dados
 
@@ -85,6 +84,7 @@ const Pedido = sequelize.define('pedidos', {
     data_criacao: { type: Sequelize.DATE, allowNull: false },
     frete_opcao: { type: Sequelize.STRING(100), allowNull: true },
     frete_preco: { type: Sequelize.DECIMAL(10, 2), allowNull: true },
+    frete_opcao_id: { type: Sequelize.STRING(100), allowNull: true },
     frete_etiqueta_id: { type: Sequelize.STRING(100), allowNull: true },
     frete_link_impressao: { type: Sequelize.TEXT, allowNull: true },
     status_pagamento: { type: Sequelize.STRING(20), allowNull: false, defaultValue: 'pendente' },
@@ -113,11 +113,16 @@ app.get('/produtos/cadastrar', bloquearAcessoExterno, (req, res) => {
     res.render('cadastrarProduto', {});
 });
 
-app.post('/produtos/cadastrar', (req, res) => {
-    const { nome, descricao } = req.body;
-    if (!nome || !descricao) return res.send('Erro - campos obrigatórios em branco.');
-    Produto.create(req.body);
-    res.send('Produto cadastrado com sucesso.');
+app.post('/produtos/cadastrar', async (req, res) => {
+    try {
+        const { nome, descricao } = req.body;
+        if (!nome || !descricao) return res.send('Erro - campos obrigatórios em branco.');
+        await Produto.create(req.body);
+        res.send('Produto cadastrado com sucesso.');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Erro ao cadastrar produto');
+    }
 });
 
 app.get('/produtos/listar-todos', bloquearAcessoExterno, async (req, res) => {
@@ -133,6 +138,9 @@ app.get('/produtos/listar-todos', bloquearAcessoExterno, async (req, res) => {
 app.get('/produtos/editar/:codigoProduto', bloquearAcessoExterno, async (req, res) => {
     try {
         const produtoBD = await Produto.findByPk(req.params.codigoProduto);
+        if (!produtoBD) {
+            return res.status(404).send('Produto não encontrado');
+        }
         res.render('editarProduto', { produtoPlano: produtoBD.get({ plain: true }) });
     } catch (err) {
         console.error(err);
@@ -140,11 +148,16 @@ app.get('/produtos/editar/:codigoProduto', bloquearAcessoExterno, async (req, re
     }
 });
 
-app.post('/produtos/salvar-edicao', (req, res) => {
-    const { codigo, nome, descricao, quantidade_estoque, preco, categoria, foto } = req.body;
-    if (!nome || !descricao) return res.send('Erro - campos obrigatórios em branco.');
-    Produto.update({ nome, descricao, quantidade_estoque, preco, categoria, foto }, { where: { codigo } });
-    res.redirect('/produtos/listar-todos');
+app.post('/produtos/salvar-edicao', async (req, res) => {
+    try {
+        const { codigo, nome, descricao, quantidade_estoque, preco, categoria, foto } = req.body;
+        if (!nome || !descricao) return res.send('Erro - campos obrigatórios em branco.');
+        await Produto.update({ nome, descricao, quantidade_estoque, preco, categoria, foto }, { where: { codigo } });
+        res.redirect('/produtos/listar-todos');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Erro ao salvar edição do produto');
+    }
 });
 
 app.get('/produtos/excluir/:codigoProduto', bloquearAcessoExterno, async (req, res) => {
@@ -160,6 +173,9 @@ app.get('/produtos/excluir/:codigoProduto', bloquearAcessoExterno, async (req, r
 app.get('/produtos/:codigoProduto', bloquearAcessoExterno, async (req, res) => {
     try {
         const produtoBD = await Produto.findByPk(req.params.codigoProduto);
+        if (!produtoBD) {
+            return res.status(404).send('Produto não encontrado');
+        }
         res.render('consultaProduto', { produtoPlano: produtoBD.get({ plain: true }) });
     } catch (err) {
         console.error(err);
@@ -204,6 +220,9 @@ app.get('/pedidos/listar-todos', bloquearAcessoExterno, async (req, res) => {
 app.get('/pedidos/:codigoPedido', bloquearAcessoExterno, async (req, res) => {
     try {
         const pedidoBD = await Pedido.findByPk(req.params.codigoPedido);
+        if (!pedidoBD) {
+            return res.status(404).send('Pedido não encontrado');
+        }
         const pedidoPlano = pedidoBD.get({ plain: true });
 
         // Converte a lista de códigos para array de inteiros
@@ -228,8 +247,6 @@ app.get('/pedidos/:codigoPedido', bloquearAcessoExterno, async (req, res) => {
         res.status(500).send('Erro ao buscar pedido');
     }
 });
-
-const filaPedidos = [];
 
 app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
     const { cliente_nome, cliente_cpf_cnpj, cliente_telefone, lista_codigos_produtos,
@@ -326,6 +343,7 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
             items: preferenceItems,
             payer: {
                 name: cliente_nome,
+                email: 'cliente@gmail.com',
                 identification: {
                     type: cleanId.length > 11 ? 'CNPJ' : 'CPF',
                     number: cleanId
@@ -361,17 +379,6 @@ app.post('/pedidos/cadastrar', cors(corsOptions), async (req, res) => {
     }
 });
 
-        const init_point = mpRes.data.sandbox_init_point || mpRes.data.init_point;
-
-        await novoPedido.update({ mercadopago_preference_id: mpRes.data.id });
-
-        res.status(201).json({ mensagem: 'Pedido cadastrado com sucesso', init_point });
-    } catch (err) {
-        console.error('Erro na integração com Mercado Pago:', err.response ? err.response.data : err.message);
-        res.status(500).json({ erro: 'Erro ao criar o pagamento no Mercado Pago. Verifique suas credenciais de teste.' });
-    }
-});
-
 app.get('/pedidos/retorno', async (req, res) => {
     const { collection_status, status, external_reference, preference_id } = req.query;
 
@@ -386,16 +393,16 @@ app.get('/pedidos/retorno', async (req, res) => {
         }
 
         let mensagem = 'O pagamento está pendente ou sendo processado.';
-        let cor = '#f59e0b'; // laranja
+        let cor = '#f59e0b';
 
         if (status === 'approved' || collection_status === 'approved') {
             await pedido.update({ status_pagamento: 'pago' });
             mensagem = 'Pagamento Aprovado com Sucesso!';
-            cor = '#10b981'; // verde
+            cor = '#10b981';
         } else if (status === 'rejected' || status === 'null') {
             await pedido.update({ status_pagamento: 'cancelado' });
             mensagem = 'O pagamento foi recusado ou cancelado.';
-            cor = '#ef4444'; // vermelho
+            cor = '#ef4444';
         }
 
         res.render('retornoPedido', { layout: false, pedido: pedido.get({ plain: true }), mensagem, cor });
@@ -523,12 +530,12 @@ app.post('/pedidos/emitir-etiqueta/:codigo', bloquearAcessoExterno, async (req, 
             cpf = cpf.replace(/\D/g, '');
             if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
             let soma = 0, resto;
-            for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i-1, i)) * (11 - i);
+            for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
             resto = (soma * 10) % 11;
             if (resto === 10 || resto === 11) resto = 0;
             if (resto !== parseInt(cpf.substring(9, 10))) return false;
             soma = 0;
-            for (let i = 1; i <= 10; i++) soma += parseInt(cpf.substring(i-1, i)) * (12 - i);
+            for (let i = 1; i <= 10; i++) soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
             resto = (soma * 10) % 11;
             if (resto === 10 || resto === 11) resto = 0;
             if (resto !== parseInt(cpf.substring(10, 11))) return false;
