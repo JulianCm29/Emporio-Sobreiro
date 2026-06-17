@@ -1,4 +1,4 @@
-const URL_API = '';
+const URL_API = 'http://localhost:3005';
 
 const CATEGORIAS = [
     { id: 'cesta',              title: 'Escolha a Embalagem',   desc: 'Selecione o tipo de cesta que servirá de base.' },
